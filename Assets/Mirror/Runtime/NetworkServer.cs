@@ -500,9 +500,6 @@ namespace Mirror
                             //  NetworkServer.Destroy)
                             if (identity != null)
                             {
-                                // is this entity owned by this connection?
-                                bool owned = identity.connectionToClient == conn;
-
                                 // multiple connections might be observed by the
                                 // same NetworkIdentity, but we don't want to
                                 // serialize them multiple times. look it up first.
@@ -542,6 +539,9 @@ namespace Mirror
 
                                 // get serialization
                                 Serialization serialization = serializations[identity];
+
+                                // is this entity owned by this connection?
+                                bool owned = identity.connectionToClient == conn;
 
                                 // send serialized data
                                 // owner writer if owned
