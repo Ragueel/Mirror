@@ -1297,7 +1297,8 @@ namespace Mirror
         void SendUpdateVarsMessage()
         {
             // one writer for owner, one for observers
-            using (PooledNetworkWriter ownerWriter = NetworkWriterPool.GetWriter(), observersWriter = NetworkWriterPool.GetWriter())
+            using (PooledNetworkWriter ownerWriter = NetworkWriterPool.GetWriter(),
+                                       observersWriter = NetworkWriterPool.GetWriter())
             {
                 // serialize all the dirty components and send
                 OnSerializeAllSafely(false, ownerWriter, out int ownerWritten, observersWriter, out int observersWritten);

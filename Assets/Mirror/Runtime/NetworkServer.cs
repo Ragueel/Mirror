@@ -468,22 +468,95 @@ namespace Mirror
             {
                 // Check for dead clients but exclude the host client because it
                 // doesn't ping itself and therefore may appear inactive.
+                // TODO move this into the below foreach
                 CheckForInactiveConnections();
 
-                // update all server objects
-                foreach (KeyValuePair<uint, NetworkIdentity> kvp in NetworkIdentity.spawned)
+                // for each READY connection:
+                //   pull in UpdateVarsMessage for each entity it observes
+                foreach (NetworkConnectionToClient conn in connections.Values)
                 {
-                    NetworkIdentity identity = kvp.Value;
-                    if (identity != null)
+                    // only if this connection has joined the world yet
+                    if (conn.isReady)
                     {
-                        identity.ServerUpdate();
+                        // for each entity that this connection is seeing
+                        foreach (NetworkIdentity identity in conn.observing)
+                        {
+                            // TODO serialize the message
+                            //   TODO ideally serialize it only once, not once per connection...
+                            // TODO owner vs observer sending
+                            // TODO send to this connection (batching will batch it)
+
+                            // is this entity owned by this connection?
+                            bool owned = identity.connectionToClient == conn;
+
+                            // serialize this NetworkIdentity
+                            // (we need one writer for owner, one for observers)
+                            using (PooledNetworkWriter ownerWriter = NetworkWriterPool.GetWriter(), observersWriter = NetworkWriterPool.GetWriter())
+                            {
+                                // serialize all the dirty components and send
+                                // TODO cach the serialization per frame. return writers. etc.
+                                identity.OnSerializeAllSafely(false, ownerWriter, out int ownerWritten, observersWriter, out int observersWritten);
+
+                                // clear dirty bits only for the components that we serialized
+                                // DO NOT clean ALL component's dirty bits, because
+                                // components can have different syncIntervals and we don't
+                                // want to reset dirty bits for the ones that were not
+                                // synced yet.
+                                // (we serialized only the IsDirty() components, or all of
+                                //  them if initialState. clearing the dirty ones is enough.)
+                                // TODO do this, but only once after serializing and only if we save the serialized ones
+                                ClearDirtyComponentsDirtyBits();
+
+                                // send serialized data
+                                // owner writer if owned
+                                if (owned)
+                                {
+                                    // was it dirty / did we actually serialize anything?
+                                    if (ownerWritten > 0)
+                                    {
+                                        UpdateVarsMessage message = new UpdateVarsMessage
+                                        {
+                                            netId = identity.netId,
+                                            payload = ownerWriter.ToArraySegment()
+                                        };
+                                        conn.Send(message);
+                                    }
+                                }
+                                // observers writer if not owned
+                                else
+                                {
+                                    // was it dirty / did we actually serialize anything?
+                                    if (observersWritten > 0)
+                                    {
+                                        UpdateVarsMessage message = new UpdateVarsMessage
+                                        {
+                                            netId = identity.netId,
+                                            payload = observersWriter.ToArraySegment()
+                                        };
+                                        conn.Send(message);
+                                    }
+                                }
+                            }
+                        }
                     }
-                    // spawned list should have no null entries because we
-                    // always call Remove in OnObjectDestroy everywhere.
-                    else Debug.LogWarning("Found 'null' entry in spawned list for netId=" + kvp.Key + ". Please call NetworkServer.Destroy to destroy networked objects. Don't use GameObject.Destroy.");
+                }
+
+                // for each spawned:
+                //   clear dirty bits if it has no observers.
+                //   we did this before push->pull broadcasting so let's keep
+                //   doing this for now.
+                foreach (NetworkIdentity identity in NetworkIdentity.spawned.Values)
+                {
+                    if (identity.observers == null || identity.observers.Count == 0)
+                    {
+                        // clear all component's dirty bits.
+                        // it would be spawned on new observers anyway.
+                        identity.ClearAllComponentsDirtyBits();
+                    }
                 }
 
                 // update all connections to send out batched messages in interval
+                // TODO move this into the above foreach
                 foreach (NetworkConnectionToClient conn in connections.Values)
                 {
                     conn.Update();
