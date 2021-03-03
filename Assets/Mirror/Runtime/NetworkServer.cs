@@ -494,11 +494,6 @@ namespace Mirror
                         // for each entity that this connection is seeing
                         foreach (NetworkIdentity identity in conn.observing)
                         {
-                            // TODO serialize the message
-                            //   TODO ideally serialize it only once, not once per connection...
-                            // TODO owner vs observer sending
-                            // TODO send to this connection (batching will batch it)
-
                             // is this entity owned by this connection?
                             bool owned = identity.connectionToClient == conn;
 
