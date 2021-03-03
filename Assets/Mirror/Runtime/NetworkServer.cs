@@ -592,6 +592,10 @@ namespace Mirror
                 }
                 serializations.Clear();
 
+                // TODO this unfortunately means we still need to iterate ALL
+                //      spawned and not just the ones with observers. figure
+                //      out a way to get rid of this.
+                //
                 // for each spawned:
                 //   clear dirty bits if it has no observers.
                 //   we did this before push->pull broadcasting so let's keep
