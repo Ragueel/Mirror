@@ -534,7 +534,7 @@ namespace Mirror
                                 identity.ClearDirtyComponentsDirtyBits();
                             }
 
-                            // get serializations
+                            // get serialization
                             Serialization serialization = serializations[identity];
 
                             // send serialized data
