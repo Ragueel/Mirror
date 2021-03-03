@@ -470,7 +470,7 @@ namespace Mirror
             public int observersWritten;
         }
         static Dictionary<NetworkIdentity, Serialization> serializations =
-         new Dictionary<NetworkIdentity, Serialization>();
+            new Dictionary<NetworkIdentity, Serialization>();
 
         // NetworkLateUpdate called after any Update/FixedUpdate/LateUpdate
         // (we add this to the UnityEngine in NetworkLoop)
